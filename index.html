@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#2878dc"/>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  <title>Car Logo Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>Car Logo Tracker</h1>
+    <div class="totals">
+      <div id="totalCount" class="total-count">Total: 0</div>
+      <div id="tripTimer" class="timer" aria-live="polite">00:00:00</div>
+    </div>
+    <div class="controls">
+      <button id="endTripBtn" class="btn primary">End Trip</button>
+      <button id="resetBtn" class="btn warn">Reset</button>
+      <button id="addCustomBtn" class="btn">Add Custom</button>
+      <button id="installBtn" class="btn" hidden>Install App</button>
+      <button id="themeBtn" class="btn">Toggle Theme</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="logoGrid" class="grid" aria-label="Car manufacturer logos">
+      <!-- logos populated by JS -->
+    </section>
+  </main>
+
+  <dialog id="reportDialog">
+    <form method="dialog" class="dialog-card">
+      <header>
+        <h2>Trip Report</h2>
+      </header>
+      <div id="reportContent" class="report"></div>
+      <menu class="dialog-actions">
+        <button class="btn" value="cancel">Close</button>
+        <button class="btn primary" id="downloadReportBtn" value="default">Download</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="customDialog">
+    <form method="dialog" class="dialog-card" id="customForm">
+      <header><h2>Add Custom Manufacturer</h2></header>
+      <label class="field">
+        <span>Name</span>
+        <input id="customName" type="text" placeholder="e.g., Rivian" required maxlength="24">
+      </label>
+      <label class="field">
+        <span>Emoji (optional)</span>
+        <input id="customEmoji" type="text" placeholder="🚗">
+      </label>
+      <label class="field">
+        <span>Custom Image (optional)</span>
+        <input id="customImage" type="file" accept="image/*">
+      </label>
+      <menu class="dialog-actions">
+        <button class="btn" value="cancel">Cancel</button>
+        <button class="btn primary" id="saveCustomBtn" value="default">Save</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <template id="logoCardTemplate">
+    <button class="card" data-brand="">
+      <img alt="" loading="lazy">
+      <span class="name"></span>
+      <span class="badge">0</span>
+    </button>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
