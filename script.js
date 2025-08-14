@@ -32,6 +32,57 @@ const els = {
   template: document.getElementById('logoCardTemplate')
 };
 
+// --- Trip state ---
+let tripActive = false;
+
+// --- Start Trip ---
+const startTripBtn = document.getElementById('startTripBtn');
+startTripBtn.addEventListener('click', () => {
+  tripActive = true;
+  startTripBtn.disabled = true;
+  els.endTripBtn.disabled = false;
+  els.grid.classList.remove('disabled');
+  state.startTime = Date.now();
+  startTimer();
+});
+
+// --- End Trip ---
+els.endTripBtn.addEventListener('click', () => {
+  if (!tripActive) return;
+  tripActive = false;
+  startTripBtn.disabled = false;
+  els.endTripBtn.disabled = true;
+  els.grid.classList.add('disabled');
+  clearInterval(state.timerInterval); // Stop timer
+  showReport();
+});
+
+function showReport() {
+  const total = Object.values(state.counts).reduce((a,b)=>a+b,0);
+  const rows = Object.entries(state.counts).sort((a,b)=>b[1]-a[1]);
+  const top3 = rows.slice(0,3).map(([n,c]) => `${n} (${c})`).join(', ') || '—';
+
+  const durationMs = Date.now() - state.startTime;
+  const s = Math.floor(durationMs / 1000);
+  const hh = String(Math.floor(s/3600)).padStart(2,'0');
+  const mm = String(Math.floor((s%3600)/60)).padStart(2,'0');
+  const ss = String(s%60).padStart(2,'0');
+  const duration = `${hh}:${mm}:${ss}`;
+
+  els.reportContent.innerHTML = `
+    <div><strong>Total spotted:</strong> <span class="pill">${total}</span></div>
+    <div><strong>Trip duration:</strong> ${duration}</div>
+    <div><strong>Top 3:</strong> ${top3}</div>
+    <table>
+      <thead><tr><th>Manufacturer</th><th>Count</th></tr></thead>
+      <tbody>
+        ${rows.map(([n,c]) => `<tr><td>${n}</td><td>${c}</td></tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+  els.reportDialog.showModal();
+}
+
 // --- PWA install prompt handling ---
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
@@ -124,14 +175,40 @@ function renderGrid() {
     const img = node.querySelector('img');
     img.src = brandImageSrc(name, customItem);
     img.alt = `${name} logo`;
-    node.addEventListener('click', () => increment(name));
+
+    // Increment button
+    node.querySelector('.increment').addEventListener('click', (e) => {
+      if (!tripActive) return;
+      state.counts[name] = (state.counts[name] || 0) + 1;
+      node.querySelector('.badge').textContent = String(state.counts[name]);
+      updateTotal();
+      saveState();
+      ding();
+      e.stopPropagation();
+    });
+
+    // Decrement button
+    node.querySelector('.decrement').addEventListener('click', (e) => {
+      if (!tripActive) return;
+      state.counts[name] = Math.max((state.counts[name] || 0) - 1, 0);
+      node.querySelector('.badge').textContent = String(state.counts[name]);
+      updateTotal();
+      saveState();
+      e.stopPropagation();
+    });
+
     els.grid.appendChild(node);
   });
   updateTotal();
 }
 function updateTotal() {
-  const total = Object.values(state.counts).reduce((a,b)=>a+b,0);
-  els.total.textContent = `Total: ${total}`;
+  // Update total count logic here
+  // Example:
+  let total = 0;
+  document.querySelectorAll('.card .badge').forEach(badge => {
+    total += parseInt(badge.textContent, 10) || 0;
+  });
+  document.getElementById('totalCount').textContent = `Total: ${total}`;
 }
 
 // --- Counting ---
@@ -151,33 +228,6 @@ els.resetBtn.addEventListener('click', () => {
   state.startTime = Date.now();
   saveState();
   renderGrid();
-});
-
-// --- End Trip / Report ---
-els.endTripBtn.addEventListener('click', () => {
-  const total = Object.values(state.counts).reduce((a,b)=>a+b,0);
-  const rows = Object.entries(state.counts).sort((a,b)=>b[1]-a[1]);
-  const top3 = rows.slice(0,3).map(([n,c]) => `${n} (${c})`).join(', ') || '—';
-
-  const durationMs = Date.now() - state.startTime;
-  const s = Math.floor(durationMs / 1000);
-  const hh = String(Math.floor(s/3600)).padStart(2,'0');
-  const mm = String(Math.floor((s%3600)/60)).padStart(2,'0');
-  const ss = String(s%60).padStart(2,'0');
-  const duration = `${hh}:${mm}:${ss}`;
-
-  els.reportContent.innerHTML = `
-    <div><strong>Total spotted:</strong> <span class="pill">${total}</span></div>
-    <div><strong>Trip duration:</strong> ${duration}</div>
-    <div><strong>Top 3:</strong> ${top3}</div>
-    <table>
-      <thead><tr><th>Manufacturer</th><th>Count</th></tr></thead>
-      <tbody>
-        ${rows.map(([n,c]) => `<tr><td>${n}</td><td>${c}</td></tr>`).join('')}
-      </tbody>
-    </table>
-  `;
-  els.reportDialog.showModal();
 });
 
 // Download report as JSON
@@ -253,11 +303,13 @@ function makeBadgeDataUrl(text) {
 // --- Boot ---
 function init() {
   loadState();
-  // ensure defaults exist
   DEFAULT_BRANDS.forEach(b => { if (state.counts[b] == null) state.counts[b] = 0; });
   saveState();
   renderGrid();
-  startTimer();
+  els.grid.classList.add('disabled'); // grid disabled until trip starts
+  els.endTripBtn.disabled = true;
+  startTripBtn.disabled = false;
+  els.tripTimer.textContent = '00:00:00';
 }
 init();
 
@@ -267,3 +319,44 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js');
   });
 }
+
+// Update logo card rendering logic
+function createLogoCard(brand, count, imgSrc, name, emoji) {
+  const template = document.getElementById('logoCardTemplate');
+  const card = template.content.cloneNode(true);
+  const cardDiv = card.querySelector('.card');
+  cardDiv.dataset.brand = brand;
+
+  const decrementBtn = cardDiv.querySelector('.decrement');
+  const incrementBtn = cardDiv.querySelector('.increment');
+  const img = incrementBtn.querySelector('img');
+  const nameSpan = incrementBtn.querySelector('.name');
+  const badge = incrementBtn.querySelector('.badge');
+
+  img.src = imgSrc || '';
+  img.alt = name || '';
+  nameSpan.textContent = emoji ? `${emoji} ${name}` : name;
+  badge.textContent = count;
+
+  // Increment logic
+  incrementBtn.addEventListener('click', () => {
+    if (!tripActive) return;
+    badge.textContent = ++count;
+    updateTotal();
+    // Save state if needed
+  });
+
+  // Decrement logic
+  decrementBtn.addEventListener('click', () => {
+    if (!tripActive) return;
+    if (count > 0) {
+      badge.textContent = --count;
+      updateTotal();
+      // Save state if needed
+    }
+  });
+
+  return card;
+}
+
+// Update your logo grid population logic to use createLogoCard

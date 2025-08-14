@@ -17,7 +17,8 @@
       <div id="tripTimer" class="timer" aria-live="polite">00:00:00</div>
     </div>
     <div class="controls">
-      <button id="endTripBtn" class="btn primary">End Trip</button>
+      <button id="startTripBtn" class="btn primary">Start Trip</button>
+      <button id="endTripBtn" class="btn primary" disabled>End Trip</button>
       <button id="resetBtn" class="btn warn">Reset</button>
       <button id="addCustomBtn" class="btn">Add Custom</button>
       <button id="installBtn" class="btn" hidden>Install App</button>
@@ -67,11 +68,14 @@
   </dialog>
 
   <template id="logoCardTemplate">
-    <button class="card" data-brand="">
-      <img alt="" loading="lazy">
-      <span class="name"></span>
-      <span class="badge">0</span>
-    </button>
+    <div class="card" data-brand="">
+      <button class="decrement" aria-label="Decrement">-</button>
+      <button class="increment" aria-label="Increment">
+        <img alt="" loading="lazy">
+        <span class="name"></span>
+        <span class="badge">0</span>
+      </button>
+    </div>
   </template>
 
   <script src="script.js"></script>
